@@ -3,13 +3,20 @@ package register
 import (
 	"fmt"
 	"html"
+	"log"
+	"regexp"
 	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/provider"
+)
+
+const (
+	DefaultMapName = env.String("Default")
 )
 
 type ErrProviderLayerInvalid struct {
@@ -55,8 +62,36 @@ func (e ErrDefaultTagsInvalid) Error() string {
 	return fmt.Sprintf("'default_tags' for 'provider_layer' (%v) should be a TOML table", e.ProviderLayer)
 }
 
+func AutoConfigMapLayers(providers map[string]provider.Tiler) []config.MapLayer {
+	mapLayers := make([]config.MapLayer, len(providers))
+	count := 0
+	for pname := range providers {
+		mapLayers[count] = config.MapLayer{
+			ProviderLayer: env.String(fmt.Sprintf("%s.*", pname)),
+		}
+		count++
+	}
+	return mapLayers
+}
+
+func AutoConfigMap(providers map[string]provider.Tiler) []config.Map {
+	return []config.Map{
+		{
+			Name:   DefaultMapName,
+			Layers: AutoConfigMapLayers(providers),
+		},
+	}
+}
+
 // Maps registers maps with with atlas
-func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler) error {
+// note that we are pulling the full config file to get both providers (to check if auto) and maps
+func Maps(a *atlas.Atlas, confMaps []config.Map, providers map[string]provider.Tiler) error {
+
+	maps := confMaps
+
+	if len(maps) == 0 {
+		maps = AutoConfigMap(providers)
+	}
 
 	// iterate our maps
 	for _, m := range maps {
@@ -84,10 +119,16 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			newMap.TileBuffer = uint64(*m.TileBuffer)
 		}
 
+		mapLayers := m.Layers
+
+		if len(mapLayers) == 0 {
+			mapLayers = AutoConfigMapLayers(providers)
+		}
+
 		// iterate our layers
-		for _, l := range m.Layers {
+		for _, l := range mapLayers {
 			// split our provider name (provider.layer) into [provider,layer]
-			providerLayer := strings.Split(string(l.ProviderLayer), ".")
+			providerLayer := strings.SplitN(string(l.ProviderLayer), ".", 2)
 
 			// we're expecting two params in the provider layer definition
 			if len(providerLayer) != 2 {
@@ -103,8 +144,11 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 				return ErrProviderNotFound{providerLayer[0]}
 			}
 
+			fmt.Println("printing provider:", provider)
+
 			// read the provider's layer names
 			layerInfos, err := provider.Layers()
+
 			if err != nil {
 				return ErrFetchingLayerInfo{
 					Provider: providerLayer[0],
@@ -112,18 +156,43 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			}
 
 			// confirm our providerLayer name is registered
-			var found bool
+			// this must be an array because auto providers may have multiple layers that match regex
+			var provLayers []string
 			var layerGeomType tegola.Geometry
-			for i := range layerInfos {
-				if layerInfos[i].Name() == providerLayer[1] {
-					found = true
-
-					// read the layerGeomType
-					layerGeomType = layerInfos[i].GeomType()
-					break
+			var isregex bool
+		LayerLoop:
+			for _, info := range layerInfos {
+				if providerLayer[1] == "*" {
+					// return all the layers:
+					provLayers = append(provLayers, info.Name())
+					layerGeomType = info.GeomType()
+					continue
 				}
+				// check to see if string contains regex
+				isregex = len(providerLayer[1]) != len(regexp.QuoteMeta(providerLayer[1]))
+
+				switch {
+				case isregex:
+					r, err := regexp.Compile("^" + providerLayer[1])
+					if err != nil {
+						log.Printf("Error when parsing regex (layer: %v): %v", info.Name(), err)
+						continue LayerLoop // add a Providers label at 111
+					}
+					if !r.MatchString(info.Name()) {
+						continue
+					}
+				case info.Name() == providerLayer[1]:
+					// do nothing
+				default:
+					// ignore this layer
+					continue
+
+				}
+				provLayers = append(provLayers, info.Name())
+				layerGeomType = info.GeomType()
 			}
-			if !found {
+
+			if len(provLayers) == 0 {
 				return ErrProviderLayerNotRegistered{
 					MapName:       string(m.Name),
 					ProviderLayer: string(l.ProviderLayer),
@@ -142,28 +211,39 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 				}
 			}
 
-			var minZoom uint
+			minZoom := uint(1)
 			if l.MinZoom != nil {
 				minZoom = uint(*l.MinZoom)
 			}
 
-			var maxZoom uint
+			maxZoom := uint(20)
 			if l.MaxZoom != nil {
 				maxZoom = uint(*l.MaxZoom)
 			}
 
-			// add our layer to our layers slice
-			newMap.Layers = append(newMap.Layers, atlas.Layer{
-				Name:              string(l.Name),
-				ProviderLayerName: providerLayer[1],
-				MinZoom:           minZoom,
-				MaxZoom:           maxZoom,
-				Provider:          provider,
-				DefaultTags:       defaultTags,
-				GeomType:          layerGeomType,
-				DontSimplify:      bool(l.DontSimplify),
-				DontClip:      	   bool(l.DontClip),
-			})
+			// for each provider layer, get map name
+			// this is a loop to capture auto provider layers with multiple layers that match regex
+			for _, name := range provLayers {
+				var lname string
+				if string(l.Name) == "" || isregex == true {
+					lname = name
+				} else {
+					lname = string(l.Name)
+				}
+
+				// add our layer to our layers slice
+				newMap.Layers = append(newMap.Layers, atlas.Layer{
+					Name:              lname,
+					ProviderLayerName: name,
+					MinZoom:           minZoom,
+					MaxZoom:           maxZoom,
+					Provider:          provider,
+					DefaultTags:       defaultTags,
+					GeomType:          layerGeomType,
+					DontSimplify:      bool(l.DontSimplify),
+					DontClip:          bool(l.DontClip),
+				})
+			}
 		}
 
 		a.AddMap(newMap)
