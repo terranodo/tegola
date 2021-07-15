@@ -308,14 +308,14 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"dist/css/app.6de88e40.css": distCssApp6de88e40Css,
-	"dist/css/chunk-vendors.5b77fa47.css": distCssChunkVendors5b77fa47Css,
-	"dist/favicon.ico": distFaviconIco,
-	"dist/img/arrow.606d0da4.svg": distImgArrow606d0da4Svg,
-	"dist/index.html": distIndexHtml,
-	"dist/js/app.89c5289b.js": distJsApp89c5289bJs,
-	"dist/js/app.89c5289b.js.map": distJsApp89c5289bJsMap,
-	"dist/js/chunk-vendors.6cbb65d9.js": distJsChunkVendors6cbb65d9Js,
+	"dist/css/app.6de88e40.css":             distCssApp6de88e40Css,
+	"dist/css/chunk-vendors.5b77fa47.css":   distCssChunkVendors5b77fa47Css,
+	"dist/favicon.ico":                      distFaviconIco,
+	"dist/img/arrow.606d0da4.svg":           distImgArrow606d0da4Svg,
+	"dist/index.html":                       distIndexHtml,
+	"dist/js/app.89c5289b.js":               distJsApp89c5289bJs,
+	"dist/js/app.89c5289b.js.map":           distJsApp89c5289bJsMap,
+	"dist/js/chunk-vendors.6cbb65d9.js":     distJsChunkVendors6cbb65d9Js,
 	"dist/js/chunk-vendors.6cbb65d9.js.map": distJsChunkVendors6cbb65d9JsMap,
 }
 
@@ -358,10 +358,11 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"dist": &bintree{nil, map[string]*bintree{
 		"css": &bintree{nil, map[string]*bintree{
-			"app.6de88e40.css": &bintree{distCssApp6de88e40Css, map[string]*bintree{}},
+			"app.6de88e40.css":           &bintree{distCssApp6de88e40Css, map[string]*bintree{}},
 			"chunk-vendors.5b77fa47.css": &bintree{distCssChunkVendors5b77fa47Css, map[string]*bintree{}},
 		}},
 		"favicon.ico": &bintree{distFaviconIco, map[string]*bintree{}},
@@ -370,9 +371,9 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		}},
 		"index.html": &bintree{distIndexHtml, map[string]*bintree{}},
 		"js": &bintree{nil, map[string]*bintree{
-			"app.89c5289b.js": &bintree{distJsApp89c5289bJs, map[string]*bintree{}},
-			"app.89c5289b.js.map": &bintree{distJsApp89c5289bJsMap, map[string]*bintree{}},
-			"chunk-vendors.6cbb65d9.js": &bintree{distJsChunkVendors6cbb65d9Js, map[string]*bintree{}},
+			"app.89c5289b.js":               &bintree{distJsApp89c5289bJs, map[string]*bintree{}},
+			"app.89c5289b.js.map":           &bintree{distJsApp89c5289bJsMap, map[string]*bintree{}},
+			"chunk-vendors.6cbb65d9.js":     &bintree{distJsChunkVendors6cbb65d9Js, map[string]*bintree{}},
 			"chunk-vendors.6cbb65d9.js.map": &bintree{distJsChunkVendors6cbb65d9JsMap, map[string]*bintree{}},
 		}},
 	}},
@@ -424,4 +425,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
