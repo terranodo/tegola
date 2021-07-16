@@ -2,4 +2,4 @@
 # are dynmically linked correctly
 FROM amazonlinux:2.0.20210701.0
 
-CMD ["ls,-la"]
+CMD ["ls","-la"]
