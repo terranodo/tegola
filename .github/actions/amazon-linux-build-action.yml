@@ -1,0 +1,15 @@
+name: 'Amazon Linux build container'
+description: 'Used for building tegola_lambda'
+inputs:
+  build-cmd:  
+    description: 'The build command to execut'
+    required: true
+    default: 'World'
+outputs:
+  time: # id of output
+    description: 'The time we greeted you'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.build-cmd }}
