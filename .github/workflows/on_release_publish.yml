@@ -82,9 +82,11 @@ jobs:
         asset_content_type: application/zip
 
   build_tegola_lambda:
-    - name: Build tegola_lambda
-      needs: gen_version
+    name: Build tegola_lambda on Amazon Linux
+    needs: gen_version
+    runs-on: ubuntu-20.04
 
+    steps:
     - name: Check out code
       uses: actions/checkout@v2
 

@@ -26,8 +26,11 @@ jobs:
         path: ${{ github.workspace }}/version.txt
 
   build_tegola_lambda:
-    - name: Build tegola_lambda
-      needs: gen_version
+    name: Build tegola_lambda on Amazon Linux
+    needs: gen_version
+    runs-on: ubuntu-20.04
+
+    steps:
 
     - name: Check out code
       uses: actions/checkout@v2
@@ -41,9 +44,10 @@ jobs:
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
     - name: Build tegola_lambda
-      uses: ./ # access private action
-      with:
-        build-cmd: cd cmd/tegola_lambda && go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"
+      uses: ./.github/actions/amazon-linux-build-action
+#      with:
+#        build-cmd: ls -la && pwd"
+ #       build-cmd: cd /github/workspace/cmd/tegola_lambda && go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"
 
     # workaround for archives losing permissions 
     # https://github.com/actions/upload-artifact/issues/38
