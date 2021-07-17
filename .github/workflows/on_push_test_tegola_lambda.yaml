@@ -45,8 +45,8 @@ jobs:
 
     - name: Build tegola_lambda
       uses: ./.github/actions/amazon-linux-build-action
-#      with:
-#        build-cmd: ls -la && pwd"
+      with:
+        build-cmd: 'ls -la && pwd'
  #       build-cmd: cd /github/workspace/cmd/tegola_lambda && go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"
 
     # workaround for archives losing permissions 
