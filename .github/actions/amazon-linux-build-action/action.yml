@@ -1,12 +1,12 @@
 name: 'Amazon Linux build container'
 description: 'Used for building tegola_lambda'
 inputs:
-  build-cmd:  
-    description: 'The build command to execut'
+  args:  
+    description: 'Should always be three dots'
     required: true
-    default: 'cd cmd/tegola_lambda && go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"'
+    default: '...'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
-    - ${{ inputs.build-cmd }}
+    - ${{ inputs.args }}
